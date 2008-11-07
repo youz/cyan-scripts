@@ -2,7 +2,8 @@
 # grass.cy - Grass interpreter
 # http://www.blue.sky.or.jp/grass/
 #
-# Copyright (C) 2008 Yousuke Ushiki. All rights reserved.
+# Copyright (C) 2008 Yousuke Ushiki  <cadr.y.ushiki@gmail.com>
+# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,13 +32,29 @@
 # 2008-11-07
 #   - First version for Cyan ver 1.0.2
 #
-
+#
+# Usage:
+# read grass-code from stdin
+#  $ cyan grass.cy < hello.www
+#
+# read grass-code from command line
+#  $ cyan grass.cy -e wWWwwwwWWww
+#
+# read input from command line
+#  $ cyan grass.cy -i asdf < echo.www
+#
 
 ## Utilities
 def(Object.list?)^: .parent == List || .parent == Pair
+def(List.car)^: []
 def(List.cadr)^: .cdr().car()
 def(List.cddr)^: .cdr().cdr()
 def(List.caddr)^: .cdr().cdr().car()
+
+def(Stream.read)^:
+  let(rec)^(&opt buf = ""):
+    aif (.readline()): rec(buf + it)
+     else: buf
 
 mac(catch)^(label,body):
   sym = Symbol.generate()
@@ -107,7 +124,7 @@ def(grass_parse_string)^(str):
       [['abs, l.cadr(), rec(l.cddr(), [])] | acc]
 
 
-## Compile grass-psuedo-code to Cyan
+## Compiler
 def(grass_compile_code)^(code, d, &opt e):
   $(tag, arity, body) := &(code.car(), code.cadr(), code.caddr())
 
@@ -141,19 +158,14 @@ def(grass_compile_code)^(code, d, &opt e):
 def(mkchar)^(code):
   ^(&opt ch):
     cond:
-      (ch.null?()):
-        code
-      (ch() == code):
-        ^(x): ^(y): x
-      else:
-        ^(x): ^(y): y
+      (ch.null?()):   code
+      (ch() == code): ^(x): ^(y): x
+      else:           ^(x): ^(y): y
 
 def(mkin)^(s):
   ^(eof):
-    aif(s.readc()):
-      mkchar(char_code[it])
-     else:
-      eof
+    aif(s.readc()): mkchar(char_code[it] || 0)
+     else: eof
 
 def(mkout)^(s):
   ^(ch): s.write(code_char[ch()]); ch
@@ -161,7 +173,7 @@ def(mkout)^(s):
 ## Eval
 def(grass_eval_string)^(str, &key output = stdout, input = stdin, run = true):
   aif (grass_parse_string(str)):
-    grass_eval_code(['abs, 0, it], :output output, :input input, :run true)
+    grass_eval_code(['abs, 0, it], :output output, :input input, :run run)
 
 def(grass_eval_code)^(code, &key output = stdout, input = stdin, run = true):
   begin:
@@ -172,7 +184,17 @@ def(grass_eval_code)^(code, &key output = stdout, input = stdin, run = true):
     grass_compile_code(code, '[out, succ, w, in], run).eval()
 
 
-if (ARGS && ARGS[0] == "-run"):
-  let(rec)^(&opt buf = ""):
-    aif(stdin.readline()): rec(buf + it)
-     else: grass_eval_string(buf)
+## Command line execution
+if (__FILE__ == PROGRAM_NAME):
+  let(rec)^(&opt a = ARGS, is = stdin, code):
+    if (a.null?()):
+      if (!code): code = stdin.read()
+      grass_eval_string(code, :input is)
+      stderr.write("\n")
+     else:
+      as := a[0].istring()
+      if (as.readc() == "-"):
+        opt := as.readc()
+        cond:
+          (opt == "e"): rec(a.cddr(), is, a[1].istring().read())
+          (opt == "i"): rec(a.cddr(), a[1].istring(), code)
