@@ -1,10 +1,6 @@
-require "clut.cy"
-
-### macros
-mac(assert)^(exp):
-  `aif (?exp) { it } else { error "failed: " + ?(exp.to_s()) }
 
 ### Stream
+
 def(Stream.read)^:
   let(rec)^(&opt buf = ""):
     aif (.readc()): rec(buf + it)
@@ -31,47 +27,4 @@ def(Stream.read)^:
   ).eval()
 
 
-### List utilities
-
-def(List.split)^(e):
-  $(acc,result) := &([], [])
-  let(rec)^(&opt l = self):
-    if (l.null?()):
-      push!(result, acc.reverse()).reverse()
-     else:
-      if (e.equal(l.car())):
-        push!(result, acc.reverse())
-        acc = []
-       else:
-        push!(acc, l.car())
-      rec(l.cdr())
-
-### String utilities
-
-def(String.to_list)^:
-  let^(&opt s = .istring(), l = []):
-    awhile(s.readc()): push!(l, it)
-    l.reverse()
-
-def(String.char)^(i):
-  #.to_list()[i]
-  s := .istring()
-  i.times: s.readc()
-  s.readc()
-
-def(String.subseq)^(start, &opt end):
-  .to_list().subseq(start,end).join()
-
-def(String.split)^(sep):
-  if (sep == ""):
-    .to_list()
-   else:
-    let^(&opt s = .istring(), l = [], acc = ""):
-      awhile (s.readc()):
-        if (it == sep):
-          push!(l,acc)
-          acc = ""
-         else:
-          acc += it
-      push!(l, acc).reverse()
 

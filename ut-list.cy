@@ -4,9 +4,8 @@
 def(List.car)^: []   # [].car() => []
 def(List.cdr)^: []   # [].cdr() => []
 def(List.cadr)^: .cdr().car()
-def(List.cddr)^: .cdr().cdr()
 def(List.caddr)^: .cdr().cdr().car()
-def(List.(+))^(l):[*self|l]
+def(List.(+))^(l):[*self | l]
 
 def(List.ncdr)^(n):
   if (n <= 0 || .null?()):
@@ -84,6 +83,15 @@ def(Pair.qsort)^(f):
   $(l,r):=.cdr().part^(y):f(y,x)
   [*l.qsort(f),x|r.qsort(f)]
 
+
+def(List.group)^(n):
+  if (n == 0): error("zero length")
+  let(rec)^(&opt l = self, acc = []):
+    aif (l.ncdr(n)):
+      rec(it, [*acc, l.subseq(0, n)])
+     else:
+      [*acc, l]
+
 def(List.split_if)^(f):
   let(rec)^(&opt self=self, acc, result):
     if (.null?()):
@@ -93,5 +101,3 @@ def(List.split_if)^(f):
         rec(.cdr(), [], result+acc)
        else:
         rec(.cdr(), acc+[.car()], result)
-
-
